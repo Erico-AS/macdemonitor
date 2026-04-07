@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Monitor · Mac DeMarco BH</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400&family=Unbounded:wght@400;700;900&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <style>
+    :root {
+      --bg:      #f5f0e8;
+      --ink:     #1a1408;
+      --mid:     #7a7060;
+      --border:  #d8cfbb;
+      --accent:  #e8420a;
+      --accent2: #2a5cff;
+      --surface: #ede8dc;
+      --mono:    'IBM Plex Mono', monospace;
+      --display: 'Unbounded', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--mono);
+      min-height: 100vh;
+      background-image:
+        repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(0,0,0,.04) 28px),
+        repeating-linear-gradient(90deg, transparent, transparent 27px, rgba(0,0,0,.015) 28px);
+    }
+
+    .topbar {
+      background: var(--ink); color: var(--bg);
+      font-size: 10px; letter-spacing: .2em; text-transform: uppercase;
+      padding: 8px 24px; display: flex; justify-content: space-between; align-items: center;
+    }
+    .topbar-right { opacity: .5; }
+
+    .wrap { max-width: 720px; margin: 0 auto; padding: 48px 24px 80px; }
+
+    .event-tag {
+      display: inline-block; background: var(--accent); color: #fff;
+      font-size: 10px; letter-spacing: .18em; text-transform: uppercase;
+      padding: 4px 10px; border-radius: 2px; margin-bottom: 20px;
+    }
+
+    h1 {
+      font-family: var(--display); font-weight: 900;
+      font-size: clamp(2.4rem, 7vw, 4.5rem);
+      line-height: .95; letter-spacing: -.03em; margin-bottom: 6px;
+    }
+    h1 em { font-style: normal; color: var(--accent); }
+
+    .h1-sub {
+      font-family: var(--display); font-size: clamp(1rem, 3vw, 1.5rem);
+      font-weight: 400; color: var(--mid); letter-spacing: -.01em; margin-bottom: 32px;
+    }
+
+    hr { border: none; border-top: 2px solid var(--ink); margin-bottom: 36px; }
+
+    .status-block {
+      border: 1.5px solid var(--border); background: var(--surface);
+      padding: 24px 28px; margin-bottom: 12px;
+      transition: border-color .3s, box-shadow .3s;
+    }
+    .status-block.running { border-color: var(--accent2); }
+    .status-block.found   { border-color: var(--accent); box-shadow: 4px 4px 0 var(--accent); }
+
+    .status-eyebrow {
+      font-size: 10px; letter-spacing: .2em; text-transform: uppercase;
+      color: var(--mid); margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+    }
+
+    .led {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--border); flex-shrink: 0; transition: background .3s;
+    }
+    .led.on    { background: var(--accent2); box-shadow: 0 0 6px var(--accent2); animation: blink 1.8s infinite; }
+    .led.found { background: var(--accent);  box-shadow: 0 0 8px var(--accent);  animation: blink .5s infinite; }
+    .led.err   { background: #cc2200; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.25} }
+
+    .status-main {
+      font-family: var(--display); font-size: clamp(1.3rem, 3.5vw, 2rem);
+      font-weight: 700; line-height: 1.2; color: var(--ink); transition: color .3s;
+    }
+    .status-main.found { color: var(--accent); }
+    .status-detail { font-size: 12px; color: var(--mid); margin-top: 6px; }
+
+    .prog-wrap { height: 3px; background: var(--border); margin-top: 16px; overflow: hidden; }
+    .prog-fill { height: 100%; background: var(--accent2); width: 0%; transition: width .8s linear; }
+
+    .section-head {
+      font-size: 10px; letter-spacing: .22em; text-transform: uppercase;
+      color: var(--mid); margin: 32px 0 16px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .section-head::after { content:''; flex:1; height:1px; background:var(--border); }
+
+    .steps {
+      border: 1.5px solid var(--border); background: var(--surface);
+      padding: 20px 24px; margin-bottom: 24px;
+    }
+    .steps ol { list-style: none; counter-reset: step; }
+    .steps ol li {
+      counter-increment: step; font-size: 12px; line-height: 2;
+      display: flex; gap: 10px; align-items: baseline;
+    }
+    .steps ol li::before { content: counter(step)'.'; color: var(--accent); font-weight:600; flex-shrink:0; width:16px; }
+    .steps a { color: var(--accent2); text-decoration: underline; text-underline-offset: 2px; }
+    code { background: var(--border); padding: 1px 5px; border-radius: 2px; font-size: 11px; }
+
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    @media (max-width: 500px) { .field-row { grid-template-columns: 1fr; } }
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    label { font-size: 10px; letter-spacing: .15em; text-transform: uppercase; color: var(--mid); }
+
+    input, select {
+      background: var(--bg); border: 1.5px solid var(--border); color: var(--ink);
+      font-family: var(--mono); font-size: 13px; padding: 10px 12px;
+      outline: none; transition: border-color .2s; border-radius: 0;
+      -webkit-appearance: none; width: 100%;
+    }
+    input:focus, select:focus { border-color: var(--accent2); }
+    input::placeholder { color: var(--mid); opacity: .6; }
+
+    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 20px 0 32px; }
+    button {
+      font-family: var(--mono); font-size: 11px; letter-spacing: .14em;
+      text-transform: uppercase; padding: 12px 20px; cursor: pointer; border: none; transition: all .12s;
+    }
+    .btn-start { background: var(--ink); color: var(--bg); font-weight: 600; }
+    .btn-start:hover { background: var(--accent); }
+    .btn-stop { background: transparent; border: 1.5px solid var(--ink); color: var(--ink); }
+    .btn-stop:hover { background: var(--ink); color: var(--bg); }
+    .btn-test { background: transparent; border: 1.5px solid var(--border); color: var(--mid); }
+    .btn-test:hover { border-color: var(--mid); color: var(--ink); }
+
+    .log-outer { border: 1.5px solid var(--border); }
+    .log-topbar {
+      background: var(--ink); color: var(--bg); padding: 8px 14px;
+      font-size: 10px; letter-spacing: .18em; text-transform: uppercase;
+      display: flex; justify-content: space-between;
+    }
+    .log-body {
+      background: var(--surface); height: 220px; overflow-y: auto;
+      padding: 10px 16px; scroll-behavior: smooth;
+    }
+    .log-body::-webkit-scrollbar { width: 4px; }
+    .log-body::-webkit-scrollbar-thumb { background: var(--border); }
+    .log-line { font-size: 11px; line-height: 1.9; display: flex; gap: 14px; }
+    .log-ts { color: var(--border); flex-shrink: 0; }
+    .log-info  .log-msg { color: var(--mid); }
+    .log-ok    .log-msg { color: var(--accent2); font-weight: 600; }
+    .log-found .log-msg { color: var(--accent); font-weight: 600; }
+    .log-warn  .log-msg { color: #cc7700; }
+    .log-err   .log-msg { color: #cc2200; }
+
+    .found-alert {
+      display: none; background: var(--accent); color: #fff;
+      padding: 18px 24px; font-family: var(--display); font-size: 1.1rem;
+      font-weight: 700; margin-bottom: 20px;
+    }
+    .found-alert a { color:#fff; margin-left:16px; font-family:var(--mono); font-size:11px; text-decoration:underline; }
+
+    footer {
+      margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--border);
+      font-size: 10px; color: var(--border);
+      display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px;
+    }
+    footer a { color: var(--mid); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <span>monitor · buyticket brasil · mac demarco bh 2026</span>
+  <span class="topbar-right" id="topClock">--:--:--</span>
+</div>
+
+<div class="wrap">
+
+  <div class="event-tag">🎸 em monitoramento</div>
+  <h1>Mac<br>De<em>Marco</em></h1>
+  <div class="h1-sub">Turnê Brasil 2026 · Belo Horizonte</div>
+  <hr />
+
+  <div class="found-alert" id="foundAlert">
+    🎟️ INGRESSO BH DISPONÍVEL!
+    <a href="https://buyticketbrasil.com/datas/mac-demarcowbsq" target="_blank">Comprar agora →</a>
+  </div>
+
+  <div class="status-block" id="statusBlock">
+    <div class="status-eyebrow"><span class="led" id="led"></span><span>status do monitor</span></div>
+    <div class="status-main" id="statusMain">Aguardando início</div>
+    <div class="status-detail" id="statusDetail">Configure o EmailJS abaixo e clique em Iniciar</div>
+    <div class="prog-wrap"><div class="prog-fill" id="progFill"></div></div>
+  </div>
+
+  <div class="section-head">configuração do emailjs (gratuito)</div>
+
+  <div class="steps">
+    <ol>
+      <li>Acesse <a href="https://www.emailjs.com" target="_blank">emailjs.com</a> e crie uma conta gratuita</li>
+      <li>Em <strong>Email Services</strong>, conecte seu Gmail <code>ericoaugustosstj@gmail.com</code> e anote o <strong>Service ID</strong></li>
+      <li>Em <strong>Email Templates</strong>, crie um template e anote o <strong>Template ID</strong></li>
+      <li>Em <strong>Account → API Keys</strong>, copie sua <strong>Public Key</strong></li>
+      <li>Cole tudo abaixo e clique em <strong>Iniciar Monitor</strong></li>
+    </ol>
+  </div>
+
+  <div class="field-row">
+    <div class="field">
+      <label>EmailJS Public Key</label>
+      <input type="text" id="cfgPublicKey" placeholder="aBcDeFgHiJkLmNo" />
+    </div>
+    <div class="field">
+      <label>Service ID</label>
+      <input type="text" id="cfgServiceId" placeholder="service_xxxxxxx" />
+    </div>
+    <div class="field">
+      <label>Template ID</label>
+      <input type="text" id="cfgTemplateId" placeholder="template_xxxxxxx" />
+    </div>
+    <div class="field">
+      <label>Intervalo de verificação</label>
+      <select id="cfgInterval">
+        <option value="60000">1 minuto</option>
+        <option value="120000" selected>2 minutos</option>
+        <option value="300000">5 minutos</option>
+        <option value="600000">10 minutos</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn-start" id="btnStart">▶ Iniciar Monitor</button>
+    <button class="btn-stop"  id="btnStop" style="display:none">■ Parar</button>
+    <button class="btn-test"  id="btnTest">✉ Testar E-mail</button>
+  </div>
+
+  <div class="section-head">log de verificações</div>
+  <div class="log-outer">
+    <div class="log-topbar">
+      <span>terminal</span>
+      <span id="logCount">0 registros</span>
+    </div>
+    <div class="log-body" id="logBody">
+      <div class="log-line log-info">
+        <span class="log-ts">--:--:--</span>
+        <span class="log-msg">monitor pronto. aguardando configuração.</span>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <span>monitor v2.2 · github pages · emailjs</span>
+    <a href="https://buyticketbrasil.com/datas/mac-demarcowbsq" target="_blank">abrir evento →</a>
+  </footer>
+
+</div>
+
+<script>
+var TARGET_URL   = 'https://buyticketbrasil.com/datas/mac-demarcowbsq';
+var CITY         = 'belo horizonte';
+var TO_EMAIL     = 'ericoaugustosstj@gmail.com';
+var PROXY_BASE   = 'https://api.allorigins.win/get?url=';
+
+var running      = false;
+var loopTimer    = null;
+var cdTimer      = null;
+var emailSent    = false;
+
+/* ── CLOCK ── */
+setInterval(function () {
+  var el = document.getElementById('topClock');
+  if (el) el.textContent = new Date().toLocaleTimeString('pt-BR');
+}, 1000);
+
+/* ── PERSIST CONFIG ── */
+window.addEventListener('load', function () {
+  ['cfgPublicKey', 'cfgServiceId', 'cfgTemplateId', 'cfgInterval'].forEach(function (id) {
+    var v = localStorage.getItem(id);
+    if (v) document.getElementById(id).value = v;
+  });
+});
+
+function saveConfig() {
+  ['cfgPublicKey', 'cfgServiceId', 'cfgTemplateId', 'cfgInterval'].forEach(function (id) {
+    localStorage.setItem(id, document.getElementById(id).value);
+  });
+}
+
+/* ── LOG ── */
+function addLog(msg, type) {
+  var body = document.getElementById('logBody');
+  var ts   = new Date().toLocaleTimeString('pt-BR');
+  var el   = document.createElement('div');
+  el.className = 'log-line log-' + (type || 'info');
+  el.innerHTML = '<span class="log-ts">' + ts + '</span><span class="log-msg">' + msg + '</span>';
+  body.appendChild(el);
+  body.scrollTop = body.scrollHeight;
+  document.getElementById('logCount').textContent = body.children.length + ' registros';
+}
+
+/* ── STATUS ── */
+function setStatus(msg, detail, mode) {
+  document.getElementById('statusMain').textContent   = msg;
+  document.getElementById('statusDetail').textContent = detail;
+  document.getElementById('statusBlock').className =
+    'status-block' + (mode === 'found' ? ' found' : mode === 'running' ? ' running' : '');
+  document.getElementById('statusMain').className =
+    'status-main' + (mode === 'found' ? ' found' : '');
+  document.getElementById('led').className =
+    'led' + (mode === 'running' ? ' on' : mode === 'found' ? ' found' : mode === 'err' ? ' err' : '');
+}
+
+/* ── COUNTDOWN ── */
+function startCountdown(ms) {
+  clearInterval(cdTimer);
+  var total     = ms / 1000;
+  var remaining = total;
+  var fill      = document.getElementById('progFill');
+  fill.style.width = '0%';
+
+  cdTimer = setInterval(function () {
+    remaining--;
+    fill.style.width = (((total - remaining) / total) * 100) + '%';
+    document.getElementById('statusDetail').textContent =
+      'próxima verificação em ' + remaining + 's';
+    if (remaining <= 0) clearInterval(cdTimer);
+  }, 1000);
+}
+
+/* ── XHR REQUEST (sem fetch / sem AbortSignal) ── */
+function xhrGet(url, timeout, onSuccess, onError) {
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', url, true);
+  xhr.timeout = timeout;
+  xhr.onload = function () {
+    if (xhr.status >= 200 && xhr.status < 300) {
+      onSuccess(xhr.responseText);
+    } else {
+      onError(new Error('HTTP ' + xhr.status));
+    }
+  };
+  xhr.onerror   = function () { onError(new Error('network error')); };
+  xhr.ontimeout = function () { onError(new Error('timeout após 20s')); };
+  xhr.send();
+}
+
+/* ── CHECK TICKETS ── */
+function checkTickets() {
+  addLog('verificando... [' + CITY + ']', 'info');
+
+  var url = PROXY_BASE + encodeURIComponent(TARGET_URL);
+
+  xhrGet(url, 20000,
+    function (raw) {
+      var data, html;
+      try {
+        data = JSON.parse(raw);
+        html = (data.contents || '').toLowerCase();
+      } catch (e) {
+        addLog('erro ao parsear resposta do proxy', 'err');
+        setStatus('Erro de resposta', 'Tentará novamente em breve', 'err');
+        return;
+      }
+
+      if (!html || html.length < 200) {
+        addLog('resposta vazia do proxy — tentará novamente', 'warn');
+        setStatus('Proxy sem resposta', 'Tentará novamente em breve', 'err');
+        return;
+      }
+
+      var temCidade   = html.indexOf(CITY) !== -1;
+      var temComprar  = /comprar|dispon.vel|buy|adicionar|carrinho/.test(html);
+      var temEsgotado = /esgotado|sold.out|indispon.vel/.test(html);
+
+      if (!temCidade) {
+        addLog('"' + CITY + '" não encontrado — sem ingressos BH ainda', 'info');
+        setStatus('Monitorando…', 'Nenhum ingresso BH disponível ainda', 'running');
+        return;
+      }
+
+      if (temEsgotado && !temComprar) {
+        addLog('BH encontrado mas ingressos esgotados', 'warn');
+        setStatus('Indisponível no momento', 'Monitorando… aviso quando aparecer', 'running');
+        return;
+      }
+
+      if (temCidade && temComprar) {
+        addLog('INGRESSO BH DISPONIVEL! Enviando e-mail...', 'found');
+        setStatus('INGRESSO DISPONIVEL!', 'E-mail de alerta enviado!', 'found');
+        document.getElementById('foundAlert').style.display = 'block';
+        if (!emailSent) {
+          emailSent = true;
+          sendEmail(false);
+        }
+        return;
+      }
+
+      addLog('página carregada — sem indicação de venda ativa', 'info');
+      setStatus('Monitorando…', 'Aguardando ingressos aparecerem', 'running');
+    },
+    function (err) {
+      addLog('erro: ' + err.message, 'err');
+      setStatus('Erro de verificação', err.message, 'err');
+    }
+  );
+}
+
+/* ── EMAILJS ── */
+function sendEmail(isTest) {
+  var publicKey  = document.getElementById('cfgPublicKey').value.trim();
+  var serviceId  = document.getElementById('cfgServiceId').value.trim();
+  var templateId = document.getElementById('cfgTemplateId').value.trim();
+
+  if (!publicKey || !serviceId || !templateId) {
+    addLog('EmailJS nao configurado — preencha os 3 campos', 'err');
+    return;
+  }
+
+  emailjs.init({ publicKey: publicKey });
+
+  var params = {
+    to_email:  TO_EMAIL,
+    to_name:   'Erico',
+    subject:   isTest
+      ? 'Teste do Monitor Mac DeMarco BH'
+      : 'INGRESSO MAC DEMARCO BH DISPONIVEL!',
+    message:   isTest
+      ? 'Teste funcionando! O monitor esta configurado corretamente.'
+      : 'Ingresso para Mac DeMarco em Belo Horizonte disponivel!\n\nCompre agora: ' + TARGET_URL + '\n\nHorario: ' + new Date().toLocaleString('pt-BR'),
+    event_url: TARGET_URL,
+    timestamp: new Date().toLocaleString('pt-BR')
+  };
+
+  emailjs.send(serviceId, templateId, params)
+    .then(function () {
+      addLog('e-mail ' + (isTest ? 'de teste ' : '') + 'enviado para ' + TO_EMAIL, 'ok');
+    })
+    .catch(function (err) {
+      addLog('falha ao enviar e-mail: ' + JSON.stringify(err), 'err');
+    });
+}
+
+function testEmail() {
+  saveConfig();
+  addLog('enviando e-mail de teste...', 'info');
+  sendEmail(true);
+}
+
+/* ── MONITOR CONTROL ── */
+function startMonitor() {
+  if (running) return;
+  saveConfig();
+
+  var pk = document.getElementById('cfgPublicKey').value.trim();
+  var si = document.getElementById('cfgServiceId').value.trim();
+  var ti = document.getElementById('cfgTemplateId').value.trim();
+
+  if (!pk || !si || !ti) {
+    addLog('preencha Public Key, Service ID e Template ID antes de iniciar', 'err');
+    setStatus('Configuracao incompleta', 'Preencha os 3 campos do EmailJS', 'err');
+    return;
+  }
+
+  var intervalMs = parseInt(document.getElementById('cfgInterval').value);
+  running   = true;
+  emailSent = false;
+
+  document.getElementById('btnStart').style.display = 'none';
+  document.getElementById('btnStop').style.display  = 'inline-block';
+  setStatus('Monitorando…', 'Primeira verificacao em andamento', 'running');
+  addLog('monitor iniciado', 'ok');
+
+  checkTickets();
+
+  loopTimer = setInterval(function () {
+    checkTickets();
+    startCountdown(intervalMs);
+  }, intervalMs);
+
+  startCountdown(intervalMs);
+}
+
+function stopMonitor() {
+  clearInterval(loopTimer);
+  clearInterval(cdTimer);
+  running = false;
+  document.getElementById('btnStart').style.display = 'inline-block';
+  document.getElementById('btnStop').style.display  = 'none';
+  document.getElementById('progFill').style.width = '0%';
+  setStatus('Monitor pausado', 'Clique em Iniciar para retomar', '');
+  addLog('monitor pausado', 'warn');
+}
+
+/* ── BIND BUTTONS (sem onclick inline) ── */
+document.addEventListener('DOMContentLoaded', function () {
+  document.getElementById('btnStart').addEventListener('click', startMonitor);
+  document.getElementById('btnStop').addEventListener('click', stopMonitor);
+  document.getElementById('btnTest').addEventListener('click', testEmail);
+});
+</script>
+</body>
+</html>
